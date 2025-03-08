@@ -1,0 +1,120 @@
+
+import pytest  # Импорт библиотеки pytest для тестирования
+import time  # Импорт библиотеки time для работы с временем
+import traceback  # Импорт модуля traceback для отслеживания исключений
+import pickle
+from selenium import webdriver  # Импорт модуля webdriver из библиотеки selenium для автоматизации браузера
+from selenium.webdriver.common.keys import Keys  # Импорт Keys из модуля common.keys для работы с клавиатурными кнопками
+from selenium.webdriver.common.by import By  # Импорт By из модуля common.by для выбора элементов
+from selenium.webdriver.support.ui import WebDriverWait  # Импорт WebDriverWait из модуля support.ui для ожидания элементов
+from selenium.webdriver.support import expected_conditions as EC  # Импорт expected_conditions из support для условий ожидания
+from selenium.common.exceptions import TimeoutException  # Импорт исключения TimeoutException для обработки исключений времени ожидания
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.common.exceptions import NoSuchElementException
+
+@pytest.fixture(scope="module")
+def browser():
+    # Инициализация WebDriver (Chrome)
+    browser = webdriver.Chrome()
+    # Максимизация окна браузера (полноэкранный режим)
+    browser.maximize_window()
+    yield browser
+    # Закрытие браузера после завершения всех тестов
+    browser.quit()
+
+
+# подключаемый файл choose_and_open_categories.py (который кликает к таблице)
+from choose_and_open_categories2 import save_cookies
+from choose_and_open_categories2 import load_cookies
+from choose_and_open_categories2 import test_login
+from choose_and_open_categories2 import test_choose_category
+
+
+
+def test_table_row_values(browser):
+    try:
+        time.sleep(2)
+        # Ожидание появления кнопки на странице
+        button = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.XPATH, '//span[text()="Planning and Monitoring"]')))
+
+        # Проверяем, есть ли у кнопки атрибут 'disabled'
+        is_disabled = button.get_attribute("disabled")
+
+        if is_disabled is not None:  # Проверяем наличие атрибута
+            print("Кнопка неактивна, клик не производится.")
+        else:
+            print("Кнопка активна, клик выполняется успешно.")
+            button.click()    
+    except Exception as e:
+        print(f"Ошибка при поиске ячеек таблицы: {e}")
+
+    time.sleep(1)
+    try:
+        document = WebDriverWait(browser, 5).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="root"]/div[2]/section/div/div[2]/div[3]/div/div/div/div/div/div[2]/table/tbody/tr[2]/td[1]')))
+        document.click()   
+        print(f"\nперемещение кликнуто успешно")  # Вывод сообщения о нажатии
+ 
+    except Exception as e:
+        print(f"ОШИБКА! перемещение НЕ кликнуто!: {e}")
+
+
+    time.sleep(1)
+    try:
+        cell = WebDriverWait(browser, 5).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="root"]/div[2]/section/div[3]/div/div/div/div/div[2]/table/tbody/tr[2]/td[3]')))
+        cell.click()   
+        print(f"\nЭлемент с баркодом кликнут успешно")  # Вывод сообщения о нажатии
+ 
+    except Exception as e:
+        print(f"ОШИБКА! перемещение НЕ кликнуто!: {e}")
+
+    try:
+        # Получение текста из элемента
+        time.sleep(1)
+        cell_value = cell.text
+        print(f"Значение в элементе: {cell_value}")
+        # Клик по элементу
+
+        cell.click()
+    
+        # Открытие новой вкладки, для сайта ввода баркода
+        browser.execute_script("window.open('');")
+        print(f"\nНовая вкладка открыта успешно")
+        # Переключение на новую вкладку
+        browser.switch_to.window(browser.window_handles[1])
+        # Переход по URL
+        browser.get('https://barcode.tec-it.com/ru')
+        print(f"\nНовая вкладка с сайтом для баркода открыта успешно")
+    
+        # Ожидание появления элемента с ID "Data"
+        data_input = WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="Data"]')))
+        print(f"\nПоле ввода баркода найдено успешно")
+
+        # Клик по полю ввода
+        data_input.click()
+        print(f"\nКлик по полю ввода баркода успешен")
+        # Очистка текущего значения
+        data_input.clear()    
+        print(f"\nЗначение в поле ввода баркода очищено успешно")
+
+
+        # Вставка ранее скопированного значения
+        data_input.send_keys(cell_value)
+        print(f"Вставлено значение: {cell_value}")
+        
+        
+    except Exception as e:
+        print(f"Произошла ОШИБКА!: {e}")
+
+    try:
+        # Ожидание появления элемента с ID "Data"
+        refresh_link = WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.XPATH, '//a[@title="Обновить QR-код"]')))
+        # Клик по полю ввода
+        refresh_link.click()
+        print(f"Кнопка генерации баркода 'Обновить' нажата успешно")
+    except Exception as e:
+        print(f"Произошла ОШИБКА! кнопка Обновить НЕ нажата: {e}")
+    
+    time.sleep(10)
+        
+        
+# Запуск теста в терминале: pytest qwe2.py -s
